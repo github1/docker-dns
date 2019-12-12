@@ -17,6 +17,8 @@ if (!opts.nameservers) opts.nameservers = EXTERNAL_DNS.split(',')
 if (!opts.servers) opts.servers = {}
 if (!opts.domains) opts.domains = {}
 if (!opts.hosts) opts.hosts = {}
+if (!opts.gateway) opts.gateway = '172.28.0.1'
+if (!opts.internal) opts.internal = '192.168.65.2';
 
 process.env.DEBUG_FD = process.env.DEBUG_FD || 1
 process.env.DEBUG = process.env.DEBUG || opts.logging
@@ -53,7 +55,7 @@ server.on('message', function (message, rinfo) {
   var domain = query.question[0].name
   var type = query.question[0].type
 
-  logdebug('query: %j', query)
+  logdebug('query: %j rinfo: %j', query, rinfo)
 
   Object.keys(opts.hosts).forEach(function (h) {
     if (domain === h) {
@@ -84,8 +86,10 @@ server.on('message', function (message, rinfo) {
       if (typeof opts.domains[opts.domains[s]] !== 'undefined') {
         answer = opts.domains[opts.domains[s]]
       }
-
-      logquery('type: server, domain: %s, answer: %s', domain, opts.domains[s])
+      if (answer === '127.0.0.1' && rinfo.address !== opts.gateway) {
+        answer = opts.internal;
+      }
+      logquery('type: server, domain: %s, answer: %s', domain, answer)
 
       var res = util.createAnswer(query, answer)
       server.send(res, 0, res.length, rinfo.port, rinfo.address)
